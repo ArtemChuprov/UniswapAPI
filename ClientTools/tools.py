@@ -70,7 +70,9 @@ def find_blocks_in_time_range(web3, start_time, end_time):
     return (start_block_number, end_block_number)
 
 
-def convert_swap_event_data(event_args):
+def convert_swap_event_data(event):
+    event_args = event["args"]
+    block_number = event["blockNumber"]
     """
     Convert and decode event data to a more readable format.
 
@@ -88,4 +90,5 @@ def convert_swap_event_data(event_args):
         "sqrtPriceX96": event_args["sqrtPriceX96"],
         "liquidity": event_args["liquidity"],
         "tick": event_args["tick"],
+        "block_number": int(block_number),
     }
