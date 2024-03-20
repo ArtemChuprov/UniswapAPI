@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: DEX_API
+Version: 0.0.1
+Author: Blockers
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: Ubuntu
+Requires-Python: >=3.9
+Requires-Dist: web3

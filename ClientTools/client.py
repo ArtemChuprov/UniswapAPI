@@ -1,50 +1,70 @@
+from numpy.core.multiarray import array as array
 from web3 import Web3
 from abc import ABC, abstractmethod
 import numpy as np
+from .configs import POOL_ABI, POOL_ADDRESS, API_KEY
+from web3 import Web3
+from .tools import convert_swap_event_data, find_blocks_in_time_range
+from datetime import datetime, timedelta
+
+POOL_KEYS = {"eth_usd": "2f1c7a49727a459fa525610c8a03856d"}
 
 
 class SimpleClient(ABC):
-    def __init__(self, net_url: str, client_secret_key: str):
-        self.net_url = net_url
-        self.client_secret_key = client_secret_key
+    def __init__(self, client_api_key: str):
+        self.client_api_key = client_api_key
+        self.web3 = Web3(
+            Web3.HTTPProvider("https://mainnet.infura.io/v3/" + client_api_key)
+        )
 
-    @abstractmethod
-    def provide_liquidity(
-        self, symbol_1: str, symbol_2: str, amount_1: float, amount_2: float
-    ):
-        pass
+    # @abstractmethod
+    # def provide_liquidity(
+    #     self, symbol_1: str, symbol_2: str, amount_1: float, amount_2: float
+    # ):
+    #     pass
 
     @abstractmethod
     def get_trades(self) -> np.array:
         pass
 
-    @abstractmethod
-    def create_candles(self):
-        pass
+    # @abstractmethod
+    # def create_candles(self):
+    #     pass
 
-    @abstractmethod
-    def get_contract_address(self, symbol_1: str, symbol_2: str) -> str:
-        pass
+    # @abstractmethod
+    # def get_contract_address(self, symbol_1: str, symbol_2: str) -> str:
+    #     pass
 
-    @abstractmethod
-    def get_balances(self) -> dict:
-        pass
+    # @abstractmethod
+    # def get_balances(self) -> dict:
+    #     pass
 
 
 class UniswapClient(SimpleClient):
-    def provide_liquidity(
-        self, symbol_1: str, symbol_2: str, amount_1: float, amount_2: float
-    ):
-        web3 = Web3(
-            Web3.HTTPProvider("https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID")
+    def get_trades(
+        self,
+        symbol_1: str,
+        symbol_2: str,
+        from_datetime: datetime,
+        to_datetime: datetime,
+    ) -> np.array:
+        pair_name = symbol_1.lower() + "_" + symbol_2.lower()
+        address = POOL_ADDRESS[pair_name]
+        pool_contract = self.web3.eth.contract(
+            address=Web3.to_checksum_address(address), abi=POOL_ABI
         )
-        pair_contract_address = self.get_contract_address(
-            symbol_1=symbol_1, symbol_2=symbol_2
-        )  # replace with the actual pair contract address
-        pair_abi = [...]  # replace with the actual ABI
-        pair_contract = web3.eth.contract(address=pair_contract_address, abi=pair_abi)
+        # Find start and end blocks for the given time range
+        start_block, end_block = find_blocks_in_time_range(
+            self.web3, from_datetime, to_datetime
+        )
 
-        # setup your filter
-        swap_filter = pair_contract.events.Swap.createFilter(
-            fromBlock=0, toBlock="latest"
+        # Fetch Swap events within the block range
+        swap_events_filter = pool_contract.events.Swap.create_filter(
+            fromBlock=start_block, toBlock=end_block
         )
+        swap_events = swap_events_filter.get_all_entries()
+
+        # Decode and convert each swap event
+        trades = [convert_swap_event_data(event["args"]) for event in swap_events]
+
+        return trades

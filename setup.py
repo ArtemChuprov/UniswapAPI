@@ -9,6 +9,6 @@ setup(
         "Operating System :: Ubuntu",
     ],
     packages=["ClientTools"],
-    install_requires=["scikit-learn"],
+    install_requires=["web3"],
     python_requires=">=3.9",
 )
