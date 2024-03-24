@@ -2,7 +2,6 @@ from web3 import Web3
 import json
 from datetime import datetime
 import math
-from .configs import POOL_ABI
 
 
 def get_block_by_timestamp(web3, target_timestamp, start_block, end_block):
