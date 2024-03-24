@@ -71,10 +71,11 @@ def find_blocks_in_time_range(web3, start_time, end_time):
 
 
 def convert_swap_event_data(event):
-    event_args = event["args"]
-    block_number = event["blockNumber"]
     """
-    Convert and decode event data to a more readable format.
+    Convert and decode event data to a more readable format, adjusting for token decimals.
+
+    ETH generally has 18 decimal places.
+    USDT (and many stablecoins) have 6 decimal places.
 
     Parameters:
     - event_args: The 'args' attribute from a swap event log.
@@ -82,12 +83,28 @@ def convert_swap_event_data(event):
     Returns:
     A dictionary containing decoded and converted swap event data.
     """
+
+    event_args = event["args"]
+    block_number = event["blockNumber"]
+    # Constants for decimals
+    ETH_DECIMALS = 18
+    USDT_DECIMALS = 6
+
+    # Adjust amounts by their decimal places
+    amount0_adjusted = event_args["amount0"] / (10**ETH_DECIMALS)
+    amount1_adjusted = event_args["amount1"] / (10**USDT_DECIMALS)
+
+    # Calculate price as per the given formula
+    price = (event_args["sqrtPriceX96"] ** 2) / (2**192)
+
+    price = price * (10 ** (ETH_DECIMALS - USDT_DECIMALS))
+
     return {
         "sender": event_args["sender"],
         "recipient": event_args["recipient"],
-        "amount0": event_args["amount0"],
-        "amount1": event_args["amount1"],
-        "sqrtPriceX96": event_args["sqrtPriceX96"],
+        "amountETH": amount0_adjusted,  # ETH amount adjusted
+        "amountUSDT": amount1_adjusted,  # USDT amount adjusted
+        "price": price,
         "liquidity": event_args["liquidity"],
         "tick": event_args["tick"],
         "block_number": int(block_number),
